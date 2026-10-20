@@ -1,3 +1,5 @@
 .env
 secrets.yaml
 .git
+.dockerignore
+.gitignore
