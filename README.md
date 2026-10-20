@@ -8,6 +8,10 @@ A bash script that imports secrets from a YAML file into a GitHub repository, ei
 - [`yq`](https://github.com/mikefarah/yq) (mikefarah v4) and [`jq`](https://jqlang.github.io/jq/)
 - Admin access to the target repository (environments are created automatically if missing)
 
+## Two ways to run
+
+The same script works both **locally** and **with Docker Compose**; use whichever you prefer. Both share the same `.env` file and YAML format.
+
 ## Configuration
 
 ```bash
@@ -17,6 +21,7 @@ cp .env.example .env
 ```bash
 OWNER="your-github-username"   # Owner used when the repository has no "owner/" prefix
 YAML_FILE="secrets.yaml"       # Path to your secrets file
+# GH_TOKEN="..."              # Docker only; locally `gh auth login` is used instead
 # REPO="your-repo"             # Optional, overrides "repository:" in the YAML
 ```
 
@@ -38,7 +43,7 @@ environment-secrets:
 
 Both sections are optional. A plain map (`SECRET_1: VALUE_1`) is accepted in place of the list form. See `example.secrets.yaml`.
 
-## Usage
+## Usage (local, without Docker)
 
 ```bash
 cp example.secrets.yaml secrets.yaml   # then edit
@@ -49,7 +54,7 @@ Missing environments are created automatically (via the GitHub API) before their
 
 Values are sent to `gh secret set` through stdin. `.env` and `secrets.yaml` are git-ignored; never commit real secrets.
 
-## Docker
+## Usage (Docker Compose)
 
 No local `gh`, `yq` or `jq` needed. In `.env` set `OWNER`, `GH_TOKEN` (a token with `repo` scope and admin access to the target repository) and `YAML_FILE` (host path to your YAML, default `./secrets.yaml`), then run:
 
