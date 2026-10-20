@@ -6,7 +6,7 @@ A bash script that imports secrets from a YAML file into a GitHub repository, ei
 
 - [GitHub CLI](https://cli.github.com/) (`gh`), authenticated (`gh auth login`)
 - [`yq`](https://github.com/mikefarah/yq) (mikefarah v4) and [`jq`](https://jqlang.github.io/jq/)
-- Admin access to the target repository; environments must already exist
+- Admin access to the target repository (environments are created automatically if missing)
 
 ## Configuration
 
@@ -44,6 +44,8 @@ Both sections are optional. A plain map (`SECRET_1: VALUE_1`) is accepted in pla
 cp example.secrets.yaml secrets.yaml   # then edit
 ./import_secrets.sh
 ```
+
+Missing environments are created automatically (via the GitHub API) before their secrets are set.
 
 Values are sent to `gh secret set` through stdin. `.env` and `secrets.yaml` are git-ignored; never commit real secrets.
 

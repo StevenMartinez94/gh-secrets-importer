@@ -60,6 +60,21 @@ ENTRIES=$(jq -c '
 
 SUCCESSFUL=()
 UNSUCCESSFUL=()
+SEEN_ENVS=" "
+FAILED_ENVS=" "
+
+# Create (or update, idempotently) an environment so secrets can be set on it.
+ensure_environment() {
+    local env_name="$1" encoded
+    encoded=$(jq -rn --arg e "$env_name" '$e | @uri')
+    SEEN_ENVS+="$env_name "
+    if gh api --method PUT "repos/${FULL_REPO}/environments/${encoded}" --silent; then
+        echo "Environment ready: $env_name"
+    else
+        echo "ERROR: could not create environment '$env_name'."
+        FAILED_ENVS+="$env_name "
+    fi
+}
 
 while IFS= read -r ENTRY; do
     [ -z "$ENTRY" ] && continue
@@ -74,10 +89,16 @@ while IFS= read -r ENTRY; do
     else
         LABEL="$NAME (environment: $ENV_NAME)"
         ARGS=(secret set "$NAME" --repo "$FULL_REPO" --env "$ENV_NAME")
+        case "$SEEN_ENVS" in *" $ENV_NAME "*) ;; *) ensure_environment "$ENV_NAME" ;; esac
     fi
 
     echo ""
     echo "Processing: $LABEL"
+
+    if [ "$SCOPE" = "environment" ] && [[ "$FAILED_ENVS" == *" $ENV_NAME "* ]]; then
+        UNSUCCESSFUL+=("$LABEL (environment could not be created)")
+        continue
+    fi
 
     if [ "$VALUE" = "null" ] || [ -z "$VALUE" ]; then
         echo "ERROR: empty value for $LABEL."
