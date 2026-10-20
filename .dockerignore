@@ -1,8 +1,16 @@
+# env related
 .env
 .env.example
+
+# Github secrets related
 secrets.yaml
 example.secrets.yaml
+
+# Git related
 .git
 .gitignore
-Dockerfile
+
+# Docker
 .dockerignore
+Dockerfile
+docker-compose.yml
