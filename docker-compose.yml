@@ -1,11 +1,8 @@
 services:
-  importer:
+  gh-secrets-importer:
     build: .
-    environment:
-      OWNER: ${OWNER:?set OWNER in .env}
-      GH_TOKEN: ${GH_TOKEN:?set GH_TOKEN in .env}
-      REPO: ${REPO:-}
-      YAML_FILE: /app/secrets.yaml
+    env_file: .env
+    container_name: gh-secrets-importer
     volumes:
       - type: bind
         source: ${YAML_FILE:-./secrets.yaml}
