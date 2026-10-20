@@ -1,0 +1,13 @@
+services:
+  importer:
+    build: .
+    environment:
+      OWNER: ${OWNER:?set OWNER in .env}
+      GH_TOKEN: ${GH_TOKEN:?set GH_TOKEN in .env}
+      REPO: ${REPO:-}
+      YAML_FILE: /app/secrets.yaml
+    volumes:
+      - type: bind
+        source: ${YAML_FILE:-./secrets.yaml}
+        target: /app/secrets.yaml
+        read_only: true

@@ -1,19 +1,15 @@
 #!/bin/bash
 
-# --- Load Configuration from .env file ---
-if [ ! -f ".env" ]; then
-    echo "Error: .env file not found."
-    echo "Please create a .env file. You can copy from .env.example:"
-    echo "  cp .env.example .env"
-    exit 1
+# --- Load Configuration from .env file (optional if variables are already exported) ---
+if [ -f ".env" ]; then
+    set -a
+    source .env
+    set +a
 fi
 
-set -a
-source .env
-set +a
-
 if [ -z "$OWNER" ] || [ -z "$YAML_FILE" ]; then
-    echo "Error: OWNER and YAML_FILE must be set in .env file."
+    echo "Error: OWNER and YAML_FILE must be set (in .env or the environment).
+    echo "You can copy .env.example: cp .env.example .env""
     exit 1
 fi
 

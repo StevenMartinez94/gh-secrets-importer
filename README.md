@@ -49,6 +49,16 @@ Missing environments are created automatically (via the GitHub API) before their
 
 Values are sent to `gh secret set` through stdin. `.env` and `secrets.yaml` are git-ignored; never commit real secrets.
 
+## Docker
+
+No local `gh`, `yq` or `jq` needed. In `.env` set `OWNER`, `GH_TOKEN` (a token with `repo` scope and admin access to the target repository) and `YAML_FILE` (host path to your YAML, default `./secrets.yaml`), then run:
+
+```bash
+docker compose run --rm importer
+```
+
+The YAML file is mounted read-only into the container; `.env` is never copied into the image.
+
 ## License
 
 MIT
