@@ -1,5 +1,8 @@
 .env
+.env.example
 secrets.yaml
+example.secrets.yaml
 .git
-.dockerignore
 .gitignore
+Dockerfile
+.dockerignore
