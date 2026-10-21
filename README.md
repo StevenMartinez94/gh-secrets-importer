@@ -1,6 +1,6 @@
 # GitHub Secrets Importer
 
-A bash script that imports secrets from a YAML file into a GitHub repository, either as **repository secrets** or **environment secrets** (per environment).
+A bash script that imports secrets and variables from a YAML file into a GitHub repository, either as **repository-level values** or **environment-level values** (per environment).
 
 ## Prerequisites
 
@@ -34,14 +34,22 @@ repository-secrets:
   - SECRET_1: VALUE_1
   - SECRET_2: VALUE_2
 
+repository-variables:
+  - VARIABLE_1: value_1
+  - VARIABLE_2: value_2
+
 environment-secrets:
   environment-name-1:
     - SECRET_3: VALUE_3
   environment-name-2:
     - SECRET_4: VALUE_4
+
+environment-variables:
+  environment-name-1:
+    - VARIABLE_3: value_3
 ```
 
-Both sections are optional. A plain map (`SECRET_1: VALUE_1`) is accepted in place of the list form. See `example.secrets.yaml`.
+All four sections are optional. A plain map (`NAME: VALUE`) is accepted in place of the list form. Empty variable values are supported; secret values must be non-empty. See `example.secrets.yaml`.
 
 ## Usage (local, without Docker)
 
@@ -50,9 +58,9 @@ cp example.secrets.yaml secrets.yaml   # then edit
 ./import_secrets.sh
 ```
 
-Missing environments are created automatically (via the GitHub API) before their secrets are set.
+Missing environments are created automatically (via the GitHub API) before their secrets or variables are set.
 
-Values are sent to `gh secret set` through stdin. `.env` and `secrets.yaml` are git-ignored; never commit real secrets.
+Values are sent to `gh secret set` or `gh variable set` through stdin. `.env` and `secrets.yaml` are git-ignored; never commit real secrets.
 
 ## Usage (Docker Compose)
 

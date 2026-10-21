@@ -8,8 +8,8 @@ if [ -f ".env" ]; then
 fi
 
 if [ -z "$OWNER" ] || [ -z "$YAML_FILE" ]; then
-    echo "Error: OWNER and YAML_FILE must be set (in .env or the environment).
-    echo "You can copy .env.example: cp .env.example .env""
+    echo "Error: OWNER and YAML_FILE must be set (in .env or the environment)."
+    echo "You can copy .env.example: cp .env.example .env"
     exit 1
 fi
 
@@ -37,21 +37,26 @@ case "$REPO_NAME" in
     *)   FULL_REPO="${OWNER}/${REPO_NAME}" ;;
 esac
 
-echo "Starting GitHub secrets import..."
+echo "Starting GitHub configuration import..."
 echo "Repository: $FULL_REPO"
 echo "YAML File: $YAML_FILE"
 
-# Flatten the YAML into one JSON object per secret. Secret groups may be either
-# a list of single-key maps (- NAME: value) or a plain map (NAME: value).
+# Flatten YAML groups into one JSON object per item. Groups may be either a list
+# of single-key maps (- NAME: value) or a plain map (NAME: value).
 ENTRIES=$(jq -c '
     def pairs: if type == "array" then .[] | to_entries[]
                elif type == "object" then to_entries[]
                else empty end;
     ( (.["repository-secrets"] // empty | pairs)
-        | {scope: "repository", env: "", name: .key, value: .value} ),
+        | {kind: "secret", scope: "repository", env: "", name: .key, value: .value} ),
+    ( (.["repository-variables"] // empty | pairs)
+        | {kind: "variable", scope: "repository", env: "", name: .key, value: .value} ),
     ( (.["environment-secrets"] // {} | to_entries[])
         | .key as $env | (.value | pairs)
-        | {scope: "environment", env: $env, name: .key, value: .value} )
+        | {kind: "secret", scope: "environment", env: $env, name: .key, value: .value} ),
+    ( (.["environment-variables"] // {} | to_entries[])
+        | .key as $env | (.value | pairs)
+        | {kind: "variable", scope: "environment", env: $env, name: .key, value: .value} )
 ' <<<"$YAML_JSON") || { echo "Error: unexpected YAML structure."; exit 1; }
 
 SUCCESSFUL=()
@@ -59,7 +64,7 @@ UNSUCCESSFUL=()
 SEEN_ENVS=" "
 FAILED_ENVS=" "
 
-# Create (or update, idempotently) an environment so secrets can be set on it.
+# Create (or update, idempotently) an environment before setting its items.
 ensure_environment() {
     local env_name="$1" encoded
     encoded=$(jq -rn --arg e "$env_name" '$e | @uri')
@@ -75,16 +80,18 @@ ensure_environment() {
 while IFS= read -r ENTRY; do
     [ -z "$ENTRY" ] && continue
     SCOPE=$(jq -r '.scope' <<<"$ENTRY")
+    KIND=$(jq -r '.kind' <<<"$ENTRY")
     ENV_NAME=$(jq -r '.env' <<<"$ENTRY")
     NAME=$(jq -r '.name' <<<"$ENTRY")
     VALUE=$(jq -j '.value | if type == "string" then . else tojson end' <<<"$ENTRY")
+    IS_NULL=$(jq -r '.value == null' <<<"$ENTRY")
 
     if [ "$SCOPE" = "repository" ]; then
-        LABEL="$NAME (repository)"
-        ARGS=(secret set "$NAME" --repo "$FULL_REPO")
+        LABEL="$NAME (repository $KIND)"
+        ARGS=("$KIND" set "$NAME" --repo "$FULL_REPO")
     else
-        LABEL="$NAME (environment: $ENV_NAME)"
-        ARGS=(secret set "$NAME" --repo "$FULL_REPO" --env "$ENV_NAME")
+        LABEL="$NAME (environment: $ENV_NAME, $KIND)"
+        ARGS=("$KIND" set "$NAME" --repo "$FULL_REPO" --env "$ENV_NAME")
         case "$SEEN_ENVS" in *" $ENV_NAME "*) ;; *) ensure_environment "$ENV_NAME" ;; esac
     fi
 
@@ -96,13 +103,13 @@ while IFS= read -r ENTRY; do
         continue
     fi
 
-    if [ "$VALUE" = "null" ] || [ -z "$VALUE" ]; then
+    if [ "$IS_NULL" = "true" ] || { [ "$KIND" = "secret" ] && [ -z "$VALUE" ]; }; then
         echo "ERROR: empty value for $LABEL."
-        UNSUCCESSFUL+=("$LABEL (empty value)")
+        UNSUCCESSFUL+=("$LABEL (null value or empty secret)")
         continue
     fi
 
-    # Value is passed via stdin so it never appears in the process list.
+    # Values are passed via stdin so they never appear in the process list.
     if printf '%s' "$VALUE" | gh "${ARGS[@]}"; then
         SUCCESSFUL+=("$LABEL")
     else
@@ -113,9 +120,9 @@ done <<<"$ENTRIES"
 echo ""
 echo "=================================================="
 echo "Import summary"
-echo "Secrets set (${#SUCCESSFUL[@]}):"
+echo "Items set (${#SUCCESSFUL[@]}):"
 if [ ${#SUCCESSFUL[@]} -eq 0 ]; then echo "  None"; else printf '  - %s\n' "${SUCCESSFUL[@]}"; fi
-echo "Secrets not set (${#UNSUCCESSFUL[@]}):"
+echo "Items not set (${#UNSUCCESSFUL[@]}):"
 if [ ${#UNSUCCESSFUL[@]} -eq 0 ]; then echo "  None"; else printf '  - %s\n' "${UNSUCCESSFUL[@]}"; fi
 
 [ ${#UNSUCCESSFUL[@]} -eq 0 ]
