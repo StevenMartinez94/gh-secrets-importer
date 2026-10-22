@@ -5,8 +5,28 @@ A bash script that imports secrets and variables from a YAML file into a GitHub 
 ## Prerequisites
 
 - [GitHub CLI](https://cli.github.com/) (`gh`), authenticated (`gh auth login`)
-- [`yq`](https://github.com/mikefarah/yq) (mikefarah v4) and [`jq`](https://jqlang.github.io/jq/)
+- [`yq`](https://github.com/mikefarah/yq) (mikefarah v4 or the Python `yq` wrapper) and [`jq`](https://jqlang.github.io/jq/)
 - Admin access to the target repository (environments are created automatically if missing)
+- A token with the permissions listed under [Token permissions](#token-permissions)
+
+## Token permissions
+
+The token is read from `GH_TOKEN` (or `GITHUB_TOKEN`), or from `gh auth login` when running locally.
+
+**Fine-grained PAT** (resource owner must be the account or org that owns the repository, with the target repository selected). Under *Repository permissions*, set to **Read and write**:
+
+| Permission     | Needed for                                             |
+| -------------- | ------------------------------------------------------ |
+| Administration | Creating environments                                  |
+| Environments   | Environment secrets and variables                      |
+| Secrets        | Repository and environment secrets                     |
+| Variables      | Repository and environment variables                   |
+
+If the organization requires approval for fine-grained tokens, an admin must approve it. If you create the environments manually, Administration is not required.
+
+**Classic PAT:** the `repo` scope (authorize it for SSO if the organization enforces it).
+
+A `Resource not accessible by personal access token (HTTP 403)` error means one of these permissions is missing.
 
 ## Two ways to run
 
@@ -64,7 +84,7 @@ Values are sent to `gh secret set` or `gh variable set` through stdin. `.env` an
 
 ## Usage (Docker Compose)
 
-No local `gh`, `yq` or `jq` needed. In `.env` set `OWNER`, `GH_TOKEN` (a token with `repo` scope and admin access to the target repository) and `YAML_FILE` (host path to your YAML, default `./secrets.yaml`), then run:
+No local `gh`, `yq` or `jq` needed. In `.env` set `OWNER`, `GH_TOKEN` (a token with the [permissions above](#token-permissions)) and `YAML_FILE` (host path to your YAML, default `./secrets.yaml`), then run:
 
 ```bash
 docker compose run --rm importer

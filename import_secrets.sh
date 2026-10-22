@@ -26,7 +26,8 @@ if [ ! -f "$YAML_FILE" ]; then
 fi
 
 # Repository can come from the YAML ("repository:") or the .env (REPO).
-YAML_JSON=$(yq -o=json '.' "$YAML_FILE") || { echo "Error: invalid YAML in '$YAML_FILE'."; exit 1; }
+# Mike Farah's yq needs -o=json; the Python yq wrapper already emits JSON.
+YAML_JSON=$(yq -o=json '.' "$YAML_FILE" 2>/dev/null || yq '.' "$YAML_FILE") || { echo "Error: invalid YAML in '$YAML_FILE'."; exit 1; }
 REPO_NAME="${REPO:-$(jq -r '.repository // empty' <<<"$YAML_JSON")}"
 if [ -z "$REPO_NAME" ]; then
     echo "Error: no repository specified (set 'repository:' in the YAML file or REPO in .env)."
